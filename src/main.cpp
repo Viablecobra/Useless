@@ -49,14 +49,10 @@ static int getcps() {
 
 static void load_config() {
     std::string path = "/storage/emulated/0/games/xelo_client/xelo_mods/config.json";
-    
     std::ifstream file(path);
     if (!file.good()) {
         std::ofstream out(path);
-        out << "{
-  "show_fps": true,
-  "show_cps": true
-}";
+        out << "{"show_fps": true, "show_cps": true}";
         out.close();
         g_showFPS = true;
         g_showCPS = true;
@@ -64,12 +60,9 @@ static void load_config() {
         return;
     }
     
-    std::string line, content;
-    while (std::getline(file, line)) content += line + "
-";
+    std::string content((std::istreambuf_iterator<char>(file)), std::istreambuf_iterator<char>());
     file.close();
     
-    size_t pos;
     if (content.find(""show_fps":true") != std::string::npos || content.find(""show_fps": true") != std::string::npos) {
         g_showFPS = true;
     } else if (content.find(""show_fps":false") != std::string::npos || content.find(""show_fps": false") != std::string::npos) {
@@ -88,10 +81,8 @@ static void load_config() {
 static void save_config() {
     std::string path = "/storage/emulated/0/games/xelo_client/xelo_mods/config.json";
     std::ofstream out(path);
-    out << "{
-  "show_fps": " << (g_showFPS ? "true" : "false") << ",
-  "show_cps": " << (g_showCPS ? "true" : "false") << "
-}";
+    out << "{"show_fps": " << (g_showFPS ? "true" : "false") 
+        << ", "show_cps": " << (g_showCPS ? "true" : "false") << "}";
     out.close();
 }
 
@@ -183,8 +174,9 @@ static void DrawMenu() {
     if (g_showFPS) ImGui::Text("FPS: %d", (int)io.Framerate);
     if (g_showCPS) ImGui::Text("CPS: %d", getcps());
     
-    ImGui::Checkbox("Show FPS", &g_showFPS);
-    ImGui::Checkbox("Show CPS", &g_showCPS);
+    bool fps_changed = ImGui::Checkbox("Show FPS", &g_showFPS);
+    bool cps_changed = ImGui::Checkbox("Show CPS", &g_showCPS);
+    if (fps_changed || cps_changed) save_config();
     
     g_showOverlay = g_showFPS || g_showCPS;
     ImGui::End();
