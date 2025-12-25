@@ -13,6 +13,33 @@
 #include "ImGui/backends/imgui_impl_opengl3.h"
 #include "ImGui/backends/imgui_impl_android.h"
 
+#include <vector>
+#include <chrono>
+#include <mutex>
+
+static std::vector<double> g_clicktimes;
+static std::mutex g_clickmutex;
+static const double cps_window = 1.0;
+
+static double gettime() {
+    using namespace std::chrono;
+    return duration<double>(steady_clock::now().time_since_epoch()).count();
+}
+
+static void registerclick() {
+    std::lock_guard<std::mutex> lock(g_clickmutex);
+    g_clicktimes.push_back(gettime());
+}
+
+static int getcps() {
+    std::lock_guard<std::mutex> lock(g_clickmutex);
+    double now = gettime();
+    while (!g_clicktimes.empty() && (now - g_clicktimes.front()) > cps_window) {
+        g_clicktimes.erase(g_clicktimes.begin());
+    }
+    return (int)g_clicktimes.size();
+}
+
 static bool g_Initialized = false;
 static int g_Width = 0, g_Height = 0;
 static EGLContext g_TargetContext = EGL_NO_CONTEXT;
@@ -23,7 +50,16 @@ static EGLBoolean (*orig_eglSwapBuffers)(EGLDisplay, EGLSurface) = nullptr;
 static void (*orig_Input1)(void*, void*, void*) = nullptr;
 static void hook_Input1(void* thiz, void* a1, void* a2) {
     if (orig_Input1) orig_Input1(thiz, a1, a2);
-    if (thiz && g_Initialized) ImGui_ImplAndroid_HandleInputEvent((AInputEvent*)thiz);
+    if (thiz && g_Initialized) {
+        AInputEvent* event = (AInputEvent*)thiz;
+        ImGui_ImplAndroid_HandleInputEvent(event);
+        if (AInputEvent_getType(event) == AINPUT_EVENT_TYPE_MOTION) {
+            int32_t action = AMotionEvent_getAction(event) & AMOTION_EVENT_ACTION_MASK;
+            if (action == AMOTION_EVENT_ACTION_DOWN || action == AMOTION_EVENT_ACTION_POINTER_DOWN) {
+                registerclick();
+            }
+        }
+    }
 }
 
 static int32_t (*orig_Input2)(void*, void*, bool, long, uint32_t*, AInputEvent**) = nullptr;
@@ -31,6 +67,12 @@ static int32_t hook_Input2(void* thiz, void* a1, bool a2, long a3, uint32_t* a4,
     int32_t result = orig_Input2 ? orig_Input2(thiz, a1, a2, a3, a4, event) : 0;
     if (result == 0 && event && *event && g_Initialized) {
         ImGui_ImplAndroid_HandleInputEvent(*event);
+        if (AInputEvent_getType(*event) == AINPUT_EVENT_TYPE_MOTION) {
+            int32_t action = AMotionEvent_getAction(*event) & AMOTION_EVENT_ACTION_MASK;
+            if (action == AMOTION_EVENT_ACTION_DOWN || action == AMOTION_EVENT_ACTION_POINTER_DOWN) {
+                registerclick();
+            }
+        }
     }
     return result;
 }
@@ -77,9 +119,13 @@ static void RestoreGL(const GLState& s) {
 
 static void DrawMenu() {
     ImGuiIO& io = ImGui::GetIO();
+    ImGui::SetNextWindowPos(ImVec2(10, 90), ImGuiCond_FirstUseEver);
     ImGui::SetNextWindowSize(ImVec2(200, 0), ImGuiCond_FirstUseEver);
-    ImGui::Begin("FPS", nullptr, ImGuiWindowFlags_NoResize | ImGuiWindowFlags_AlwaysAutoResize);
-    ImGui::Text("%.1f FPS", io.Framerate);
+    ImGui::Begin("Stats", nullptr, ImGuiWindowFlags_NoResize | ImGuiWindowFlags_AlwaysAutoResize);
+    
+    ImGui::Text("FPS: %.1f", io.Framerate);  // FPS from original
+    ImGui::Text("CPS: %d", getcps());        // CPS from new code
+    
     ImGui::End();
 }
 
