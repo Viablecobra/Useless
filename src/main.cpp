@@ -183,7 +183,7 @@ static void DrawMenu() {
     ImGuiIO& io = ImGui::GetIO();
     ImGui::SetNextWindowPos(ImVec2(10, 90), ImGuiCond_FirstUseEver);
     ImGui::SetNextWindowSize(ImVec2(200, 0), ImGuiCond_FirstUseEver);
-    ImGui::Begin("Stats", nullptr, ImGuiWindowFlags_NoResize | ImGuiWindowFlags_AlwaysAutoResize);
+    ImGui::Begin("XeloClient", nullptr, ImGuiWindowFlags_NoResize | ImGuiWindowFlags_AlwaysAutoResize);
     
     if (g_showFPS) ImGui::Text("FPS: %d", (int)io.Framerate);
     if (g_showCPS) ImGui::Text("CPS: %d", getcps());
