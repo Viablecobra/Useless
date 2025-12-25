@@ -52,7 +52,7 @@ static void load_config() {
     std::ifstream file(path);
     if (!file.good()) {
         std::ofstream out(path);
-        out << "{"show_fps": true, "show_cps": true}";
+        out << R"({"show_fps": true, "show_cps": true})";
         out.close();
         g_showFPS = true;
         g_showCPS = true;
@@ -61,17 +61,20 @@ static void load_config() {
     }
     
     std::string content((std::istreambuf_iterator<char>(file)), std::istreambuf_iterator<char>());
-    file.close();
     
-    if (content.find(""show_fps":true") != std::string::npos || content.find(""show_fps": true") != std::string::npos) {
+    if (content.find(R"("show_fps":true)") != std::string::npos || 
+        content.find(R"("show_fps": true)") != std::string::npos) {
         g_showFPS = true;
-    } else if (content.find(""show_fps":false") != std::string::npos || content.find(""show_fps": false") != std::string::npos) {
+    } else if (content.find(R"("show_fps":false)") != std::string::npos || 
+               content.find(R"("show_fps": false)") != std::string::npos) {
         g_showFPS = false;
     }
     
-    if (content.find(""show_cps":true") != std::string::npos || content.find(""show_cps": true") != std::string::npos) {
+    if (content.find(R"("show_cps":true)") != std::string::npos || 
+        content.find(R"("show_cps": true)") != std::string::npos) {
         g_showCPS = true;
-    } else if (content.find(""show_cps":false") != std::string::npos || content.find(""show_cps": false") != std::string::npos) {
+    } else if (content.find(R"("show_cps":false)") != std::string::npos || 
+               content.find(R"("show_cps": false)") != std::string::npos) {
         g_showCPS = false;
     }
     
@@ -81,8 +84,8 @@ static void load_config() {
 static void save_config() {
     std::string path = "/storage/emulated/0/games/xelo_client/xelo_mods/config.json";
     std::ofstream out(path);
-    out << "{"show_fps": " << (g_showFPS ? "true" : "false") 
-        << ", "show_cps": " << (g_showCPS ? "true" : "false") << "}";
+    out << R"({"show_fps": )" << (g_showFPS ? "true" : "false") 
+        << R"(, "show_cps": )" << (g_showCPS ? "true" : "false") << R"(})";
     out.close();
 }
 
