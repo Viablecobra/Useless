@@ -5,6 +5,9 @@
 #include <pthread.h>
 #include <unistd.h>
 #include <dlfcn.h>
+#include <fstream>
+#include <sstream>
+#include <string>
 
 #include "pl/Hook.h"
 #include "pl/Gloss.h"
@@ -20,6 +23,10 @@
 static std::vector<double> g_clicktimes;
 static std::mutex g_clickmutex;
 static const double cps_window = 1.0;
+
+static bool g_showFPS = true;
+static bool g_showCPS = true;
+static bool g_showOverlay = false;
 
 static double gettime() {
     using namespace std::chrono;
@@ -38,6 +45,59 @@ static int getcps() {
         g_clicktimes.erase(g_clicktimes.begin());
     }
     return (int)g_clicktimes.size();
+}
+
+static void load_config() {
+    std::string path = "/storage/emulated/0/games/xelo_client/xelo_mods/config.json";
+    
+    std::ifstream file(path);
+    if (!file.good()) {
+        std::ofstream out(path);
+        out << "{
+  "show_fps": true,
+  "show_cps": true
+}";
+        out.close();
+        g_showFPS = true;
+        g_showCPS = true;
+        g_showOverlay = true;
+        return;
+    }
+    
+    std::string line, content;
+    while (std::getline(file, line)) content += line + "
+";
+    file.close();
+    
+    size_t pos;
+    if ((pos = content.find(""show_fps":true")) != std::string::npos ||
+        (pos = content.find(""show_fps": true")) != std::string::npos) {
+        g_showFPS = true;
+    } else if ((pos = content.find(""show_fps":false")) != std::string::npos ||
+               (pos = content.find(""show_fps": false")) != std::string::npos) {
+        g_showFPS = false;
+    }
+    
+    if ((pos = content.find(""show_cps":true")) != std::string::npos ||
+        (pos = content.find(""show_cps": true")) != std::string::npos) {
+        g_showCPS = true;
+    } else if ((pos = content.find(""show_cps":false")) != std::string::npos ||
+               (pos = content.find(""show_cps": false")) != std::string::npos) {
+        g_showCPS = false;
+    }
+    
+    g_showOverlay = g_showFPS || g_showCPS;
+}
+
+static void save_config() {
+    std::string path = "/storage/emulated/0/games/xelo_client/xelo_mods/config.json";
+    std::ofstream out(path);
+    out << "{
+  "show_fps": " << (g_showFPS ? "true" : "false") << ",
+"
+        << "  "show_cps": " << (g_showCPS ? "true" : "false") << "
+}";
+    out.close();
 }
 
 static bool g_Initialized = false;
@@ -118,14 +178,20 @@ static void RestoreGL(const GLState& s) {
 }
 
 static void DrawMenu() {
+    if (!g_showOverlay) return;
+    
     ImGuiIO& io = ImGui::GetIO();
     ImGui::SetNextWindowPos(ImVec2(10, 90), ImGuiCond_FirstUseEver);
     ImGui::SetNextWindowSize(ImVec2(200, 0), ImGuiCond_FirstUseEver);
     ImGui::Begin("Stats", nullptr, ImGuiWindowFlags_NoResize | ImGuiWindowFlags_AlwaysAutoResize);
     
-    ImGui::Text("FPS: %.1f", io.Framerate);  // FPS from original
-    ImGui::Text("CPS: %d", getcps());        // CPS from new code
+    if (g_showFPS) ImGui::Text("FPS: %d", (int)io.Framerate);
+    if (g_showCPS) ImGui::Text("CPS: %d", getcps());
     
+    ImGui::Checkbox("Show FPS", &g_showFPS);
+    ImGui::Checkbox("Show CPS", &g_showCPS);
+    
+    g_showOverlay = g_showFPS || g_showCPS;
     ImGui::End();
 }
 
@@ -203,6 +269,7 @@ static void HookInput() {
 
 static void* MainThread(void*) {
     sleep(3);
+    load_config();
     GlossInit(true);
     GHandle hEGL = GlossOpen("libEGL.so");
     if (!hEGL) return nullptr;
