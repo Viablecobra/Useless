@@ -70,19 +70,15 @@ static void load_config() {
     file.close();
     
     size_t pos;
-    if ((pos = content.find(""show_fps":true")) != std::string::npos ||
-        (pos = content.find(""show_fps": true")) != std::string::npos) {
+    if (content.find(""show_fps":true") != std::string::npos || content.find(""show_fps": true") != std::string::npos) {
         g_showFPS = true;
-    } else if ((pos = content.find(""show_fps":false")) != std::string::npos ||
-               (pos = content.find(""show_fps": false")) != std::string::npos) {
+    } else if (content.find(""show_fps":false") != std::string::npos || content.find(""show_fps": false") != std::string::npos) {
         g_showFPS = false;
     }
     
-    if ((pos = content.find(""show_cps":true")) != std::string::npos ||
-        (pos = content.find(""show_cps": true")) != std::string::npos) {
+    if (content.find(""show_cps":true") != std::string::npos || content.find(""show_cps": true") != std::string::npos) {
         g_showCPS = true;
-    } else if ((pos = content.find(""show_cps":false")) != std::string::npos ||
-               (pos = content.find(""show_cps": false")) != std::string::npos) {
+    } else if (content.find(""show_cps":false") != std::string::npos || content.find(""show_cps": false") != std::string::npos) {
         g_showCPS = false;
     }
     
@@ -94,8 +90,7 @@ static void save_config() {
     std::ofstream out(path);
     out << "{
   "show_fps": " << (g_showFPS ? "true" : "false") << ",
-"
-        << "  "show_cps": " << (g_showCPS ? "true" : "false") << "
+  "show_cps": " << (g_showCPS ? "true" : "false") << "
 }";
     out.close();
 }
