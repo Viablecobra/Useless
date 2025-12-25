@@ -177,11 +177,6 @@ static void DrawMenu() {
     if (g_showFPS) ImGui::Text("FPS: %d", (int)io.Framerate);
     if (g_showCPS) ImGui::Text("CPS: %d", getcps());
     
-    bool fps_changed = ImGui::Checkbox("Show FPS", &g_showFPS);
-    bool cps_changed = ImGui::Checkbox("Show CPS", &g_showCPS);
-    if (fps_changed || cps_changed) save_config();
-    
-    g_showOverlay = g_showFPS || g_showCPS;
     ImGui::End();
 }
 
