@@ -18,6 +18,10 @@ static int g_Width = 0, g_Height = 0;
 static EGLContext g_TargetContext = EGL_NO_CONTEXT;
 static EGLSurface g_TargetSurface = EGL_NO_SURFACE;
 
+static bool g_ShowMouse = false;
+static ImVec2 g_MousePos = {0, 0};
+static bool g_LeftDown = false, g_RightDown = false;
+
 static EGLBoolean (*orig_eglSwapBuffers)(EGLDisplay, EGLSurface) = nullptr;
 
 static void (*orig_Input1)(void*, void*, void*) = nullptr;
@@ -75,12 +79,57 @@ static void RestoreGL(const GLState& s) {
     s.scissor ? glEnable(GL_SCISSOR_TEST) : glDisable(GL_SCISSOR_TEST);
 }
 
-static void DrawMenu() {
+static void DrawMouseOverlay() {
     ImGuiIO& io = ImGui::GetIO();
-    ImGui::SetNextWindowSize(ImVec2(200, 0), ImGuiCond_FirstUseEver);
-    ImGui::Begin("FPS", nullptr, ImGuiWindowFlags_NoResize | ImGuiWindowFlags_AlwaysAutoResize);
-    ImGui::Text("%.1f FPS", io.Framerate);
+    io.DisplaySize = ImVec2((float)g_Width, (float)g_Height);
+    
+    if (g_ShowMouse) {
+        ImGui::SetNextWindowPos(ImVec2(0, 0));
+        ImGui::SetNextWindowSize(io.DisplaySize);
+        ImGui::PushStyleVar(ImGuiStyleVar_WindowRounding, 0.0f);
+        ImGui::PushStyleVar(ImGuiStyleVar_WindowBorderSize, 0.0f);
+        ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(0, 0));
+        
+        ImGui::Begin("MouseOverlay", nullptr, 
+            ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoResize | 
+            ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoScrollbar |
+            ImGuiWindowFlags_NoInputs | ImGuiWindowFlags_NoBackground);
+        
+        ImDrawList* draw_list = ImGui::GetWindowDrawList();
+        ImVec2 center = ImVec2(g_MousePos.x, g_MousePos.y);
+        ImVec2 p1 = ImVec2(center.x - 12, center.y - 12);
+        ImVec2 p2 = ImVec2(center.x + 12, center.y + 12);
+        
+        draw_list->AddRectFilled(p1, p2, IM_COL32(255, 255, 255, g_LeftDown ? 255 : 128));
+        draw_list->AddRect(p1, p2, IM_COL32(0, 0, 0, 255), 0.0f, 0, 2.0f);
+        
+        ImGui::End();
+        ImGui::PopStyleVar(3);
+    }
+    
+    ImGui::SetNextWindowPos(ImVec2(g_Width - 200, g_Height - 160));
+    ImGui::SetNextWindowSize(ImVec2(180, 140), ImGuiCond_Always);
+    ImGui::PushStyleVar(ImGuiStyleVar_WindowRounding, 8.0f);
+    ImGui::Begin("Controls", nullptr, ImGuiWindowFlags_NoResize | ImGuiWindowFlags_AlwaysAutoResize);
+    
+    ImGui::Text("Mouse: %s", g_ShowMouse ? "ON" : "OFF");
+    if (ImGui::Button(g_ShowMouse ? "Hide Mouse" : "Show Mouse", ImVec2(-1, 0))) {
+        g_ShowMouse = !g_ShowMouse;
+    }
+    
+    ImGui::Separator();
+    if (ImGui::Button("Left Click", ImVec2(-1, 0))) {
+        g_LeftDown = true;
+    }
+    if (ImGui::IsItemHovered()) g_LeftDown = false;
+    
+    if (ImGui::Button("Right Click", ImVec2(-1, 0))) {
+        g_RightDown = true;
+    }
+    if (ImGui::IsItemHovered()) g_RightDown = false;
+    
     ImGui::End();
+    ImGui::PopStyleVar();
 }
 
 static void Setup() {
@@ -92,7 +141,7 @@ static void Setup() {
     if (scale < 1.5f) scale = 1.5f;
     if (scale > 4.0f) scale = 4.0f;
     ImFontConfig cfg;
-    cfg.SizePixels = 32.0f * scale;
+    cfg.SizePixels = 18.0f * scale;
     io.Fonts->AddFontDefault(&cfg);
     ImGui_ImplAndroid_Init();
     ImGui_ImplOpenGL3_Init("#version 300 es");
@@ -104,12 +153,10 @@ static void Render() {
     if (!g_Initialized) return;
     GLState s;
     SaveGL(s);
-    ImGuiIO& io = ImGui::GetIO();
-    io.DisplaySize = ImVec2((float)g_Width, (float)g_Height);
     ImGui_ImplOpenGL3_NewFrame();
     ImGui_ImplAndroid_NewFrame(g_Width, g_Height);
     ImGui::NewFrame();
-    DrawMenu();
+    DrawMouseOverlay();
     ImGui::Render();
     ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
     RestoreGL(s);
@@ -169,7 +216,7 @@ static void* MainThread(void*) {
 }
 
 __attribute__((constructor))
-void DisplayFPS_Init() {
+void MouseOverlay_Init() {
     pthread_t t;
     pthread_create(&t, nullptr, MainThread, nullptr);
 }
