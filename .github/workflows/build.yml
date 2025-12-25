@@ -4,19 +4,18 @@ on:
   push:
     branches: [main, master]
   pull_request:
-  workflow_dispatch:
 
 jobs:
   build:
     runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@v4
-    
+
     - uses: nttld/setup-ndk@v1
       id: ndk
       with:
         ndk-version: r26b
-        
+
     - name: Build
       run: |
         mkdir build
@@ -29,5 +28,5 @@ jobs:
         
     - uses: actions/upload-artifact@v4
       with:
-        name: libMaK
-        path: build/libMaK.so
+        name: libDisplayFPS
+        path: build/libDisplayFPS.so
