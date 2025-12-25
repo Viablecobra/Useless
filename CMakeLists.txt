@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.18)
-project(MaK LANGUAGES C CXX)
+project(DisplayFPS LANGUAGES C CXX)
 
 set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
@@ -26,13 +26,13 @@ FetchContent_Declare(
 FetchContent_GetProperties(preloader_android)
 if(NOT preloader_android_POPULATED)
     FetchContent_Populate(preloader_android)
-    
+
     file(READ "${preloader_android_SOURCE_DIR}/src/pl/Logger.h" LOGGER_CONTENT)
     string(REPLACE "#include <format>" "#include <fmt/format.h>" LOGGER_CONTENT "${LOGGER_CONTENT}")
     string(REPLACE "std::vformat" "fmt::vformat" LOGGER_CONTENT "${LOGGER_CONTENT}")
     string(REPLACE "std::make_format_args" "fmt::make_format_args" LOGGER_CONTENT "${LOGGER_CONTENT}")
     file(WRITE "${preloader_android_SOURCE_DIR}/src/pl/Logger.h" "${LOGGER_CONTENT}")
-    
+
     add_subdirectory(${preloader_android_SOURCE_DIR} ${preloader_android_BINARY_DIR})
 endif()
 
@@ -54,5 +54,5 @@ set(SOURCES
     src/ImGui/backends/imgui_impl_android.cpp
 )
 
-add_library(MaK SHARED ${SOURCES})
+add_library(DisplayFPS SHARED ${SOURCES})
 target_link_libraries(DisplayFPS preloader log android EGL GLESv3 GLESv2)
